@@ -1,46 +1,86 @@
 ########################################################
-#### LIBS
+#### INSTALL
 ########################################################
-import os
-import sys
+%pip install google-cloud-bigquery pyarrow db-dtypes
+dbutils.library.restartPython()
+
+
+########################################################
+#### BIBLIOTECAS
+########################################################
 from google.cloud import bigquery
-from pyspark.sql import SparkSession
-from pyspark.sql import functions as F
-import pandas as pd
 from google.oauth2 import service_account
 
 ########################################################
-#### PUBLICAÇÃO - VERSÃO INICIAL
+#### CONFIGURAÇÕES (edite só aqui)
 ########################################################
-# 1. Configurações de destino no GCP
-BILLING_ID = 'avaliacao-alfabetizacao-inep'
+PROJETO_GCP  = "avaliacao-alfabetizacao-inep"
 DATASET_GOLD = "ouro_analytics"
-TABELA = 'municipio_unido'
-CHAVE_PATH = "/Volumes/workspace/default/inep_avaliacao_alfabetizacao/avaliacao-alfabetizacao-inep-key.json"
+LOCALIZACAO  = "southamerica-east1"
 
-destino = f"{BILLING_ID}.{DATASET_GOLD}.{TABELA}"
+CAMINHO_BASE = "/Volumes/workspace/default/inep_avaliacao_alfabetizacao"
+CAMINHO_GOLD = f"{CAMINHO_BASE}/gold"
+CHAVE_PATH   = f"{CAMINHO_BASE}/avaliacao-alfabetizacao-inep-key.json"
 
-# 2. Configura a autenticação com a Service Account
-CREDENTIALS = service_account.Credentials.from_service_account_file(CHAVE_PATH)
+# Tabelas da camada Gold que serão publicadas no BigQuery.
+# Para publicar outra tabela, basta adicionar o nome da pasta aqui.
+TABELAS = [
+    "municipio_teste_unido",
+    # "escola_unido",
+    # "uf_unido",
+]
 
-# 3. Inicializa o cliente oficial do BigQuery com as credenciais
-client = bigquery.Client(credentials=CREDENTIALS, project=BILLING_ID)
+########################################################
+#### FUNÇÕES
+########################################################
+def criar_cliente_bigquery(chave_path: str, projeto: str) -> bigquery.Client:
+    """Cria o cliente do BigQuery autenticado com a Service Account."""
+    credenciais = service_account.Credentials.from_service_account_file(chave_path)
+    return bigquery.Client(credentials=credenciais, project=projeto)
 
-# 4. GARANTE QUE O DATASET EXISTE (Cria se não existir)
-dataset_ref = bigquery.Dataset(f"{BILLING_ID}.{DATASET_GOLD}")
-dataset_ref.location = "SOUTHAMERICA-EAST1"  # Ou a região onde deseja armazenar (ex: "US")
-dataset = client.create_dataset(dataset_ref, exists_ok=True)
-print(f"Dataset {DATASET_GOLD} verificado/criado com sucesso.")
 
-# 5. Leitura da camada Gold (Spark)
-df_gold = spark.read.format("parquet").load("/Volumes/workspace/default/inep_avaliacao_alfabetizacao/gold/municipio_unido/")
+def garantir_dataset(client: bigquery.Client, projeto: str, dataset: str, localizacao: str) -> None:
+    """Cria o dataset no BigQuery caso ele ainda não exista."""
+    dataset_ref = bigquery.Dataset(f"{projeto}.{dataset}")
+    dataset_ref.location = localizacao
+    client.create_dataset(dataset_ref, exists_ok=True)
+    print(f"Dataset '{dataset}' verificado/criado.")
 
-# 6. Converte o DataFrame para Pandas e envia ao BigQuery
-job = client.load_table_from_dataframe(
-    df_gold.toPandas(),
-    destino,
-    job_config=bigquery.LoadJobConfig(write_disposition="WRITE_TRUNCATE")
-)
 
-job.result()  # Aguarda a conclusão do envio
-print(f"Tabela {destino} publicada com sucesso no BigQuery!")
+def publicar_tabela(client: bigquery.Client, tabela: str) -> int:
+    """Lê uma tabela Parquet da camada Gold e sobrescreve no BigQuery.
+    Retorna o número de linhas publicadas."""
+    origem  = f"{CAMINHO_GOLD}/{tabela}/"
+    destino = f"{PROJETO_GCP}.{DATASET_GOLD}.{tabela}"
+
+    df_pandas = spark.read.parquet(origem).toPandas()
+
+    job = client.load_table_from_dataframe(
+        df_pandas,
+        destino,
+        job_config=bigquery.LoadJobConfig(write_disposition="WRITE_TRUNCATE"),
+    )
+    job.result()  # aguarda a conclusão do envio
+
+    return len(df_pandas)
+
+########################################################
+#### EXECUÇÃO
+########################################################
+client = criar_cliente_bigquery(CHAVE_PATH, PROJETO_GCP)
+garantir_dataset(client, PROJETO_GCP, DATASET_GOLD, LOCALIZACAO)
+
+sucessos, falhas = [], []
+
+for tabela in TABELAS:
+    try:
+        linhas = publicar_tabela(client, tabela)
+        sucessos.append(tabela)
+        print(f"✅ {tabela}: {linhas:,} linhas publicadas.")
+    except Exception as erro:
+        falhas.append(tabela)
+        print(f"❌ {tabela}: falhou -> {erro}")
+
+print(f"\nResumo: {len(sucessos)} publicada(s), {len(falhas)} com falha.")
+if falhas:
+    print("Tabelas com falha:", falhas)

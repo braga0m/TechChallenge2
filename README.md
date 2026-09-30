@@ -26,7 +26,7 @@ Em 2023, o Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixei
 
 
 ## 3. Fluxograma
-<img src="images/Fluxo Pipeline Tech2.png" width=2000 height=2100>
+<img src="images/Fluxo Pipeline Tech2.png" width=2500 height=2600>
 
 ## 4. Estrutura do Repositório
 ```

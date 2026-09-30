@@ -19,10 +19,7 @@ Em 2023, o Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixei
 
 **Dados ingeridos (6):** UF · Meta Alfabetização Brasil · Meta Alfabetização por UF · Meta Alfabetização por Município · Município · Dados de alunos.
 
-**Ingestão híbrida:**
-- **Batch** — dados históricos de metas, municípios e agregados nacionais (Base dos Dados).
-- **Streaming** — eventos quase-real-time (novas medições do indicador) via produtor
-  Python e Structured Streaming.
+Descrição do arquitetura.
 
 
 ## 3. Fluxograma

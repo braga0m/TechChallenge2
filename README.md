@@ -57,4 +57,8 @@ TechChallenge2/
 
 ## 6. Considerações Finais
 
-Nota-se que ainda há espaço para aprimoramento e consolidação da pipeline de dados proposta. Outro ponto de possível melhora é a estruturação das pastas, visto que os scripts/notebooks responsáveis pelo fluxo dos dados estão dispersos em duas pastas distintas. Trata-se de uma versão preliminar que servirá como base para o TechChallenge3, uma melhor integração entre as bases serão consolidadas nesse repositório.
+Nota-se que ainda há espaço para aprimoramento e consolidação da pipeline de dados proposta. Outro ponto de possível melhora é a estruturação das pastas, visto que os scripts/notebooks responsáveis pelo fluxo dos dados estão dispersos em duas pastas distintas. 
+
+Melhorias futuras: (1) desenvolver as funções utilizadas no tratamento na pasta src, e então importa-las para o notebook. Melhor organização.
+
+Trata-se de uma versão preliminar que servirá como base para o TechChallenge3, uma melhor integração entre as bases serão consolidadas nesse repositório.
